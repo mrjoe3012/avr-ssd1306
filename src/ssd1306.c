@@ -44,60 +44,87 @@ static const uint8_t ssd1306_reset[] PROGMEM = {
     0xaf, // display on
 };
 
-void ssd1306_init() {
-  i2c_start();
-  uart_transmit("SENDING INITIALISATION BYTES...\r\n");
-  for (size_t i = 0; i < sizeof(ssd1306_reset) / sizeof(uint8_t); i++) {
-    i2c_send_byte(pgm_read_byte(ssd1306_reset + i));
+bool ssd1306_init() {
+  uint8_t code;
+  code = i2c_start();
+  if (code != I2C_R_OK) {
+    return false;
   }
-  uart_transmit("FINISHED SENDING INITIALISATION BYTES...\r\n");
-  i2c_stop();
-  uart_transmit("SSD1306 INIT COMPLETE\r\n");
-}
-
-static inline void ssd1306_prepare_write(const uint8_t pageBegin,
-                                         const uint8_t pageEnd,
-                                         const uint8_t colBegin,
-                                         const uint8_t colEnd) {
-  i2c_send_byte((SSD1306_ADDRESS << 1) | I2C_WRITE);
-  i2c_send_byte(CONTROL_BYTE(1, 0));
-  i2c_send_byte(0x21); // col start/end
-  i2c_send_byte(CONTROL_BYTE(1, 0));
-  i2c_send_byte(colBegin);
-  i2c_send_byte(CONTROL_BYTE(1, 0));
-  i2c_send_byte(colEnd);
-  i2c_send_byte(CONTROL_BYTE(1, 0));
-  i2c_send_byte(0x22); // page start/end
-  i2c_send_byte(CONTROL_BYTE(1, 0));
-  i2c_send_byte(pageBegin);
-  i2c_send_byte(CONTROL_BYTE(1, 0));
-  i2c_send_byte(pageEnd);
-  i2c_send_byte(CONTROL_BYTE(0, 1));
-}
-
-void ssd1306_write_gddram(const uint8_t pageStartIdx, const uint8_t pageEndIdx,
-                          const uint8_t colStartIdx, const uint8_t colEndIdx,
-                          const uint8_t *const data, const uint32_t n,
-                          const uint8_t flags) {
-  i2c_start();
-  ssd1306_prepare_write(pageStartIdx, pageEndIdx - 1, colStartIdx, colEndIdx - 1);
-  for (uint32_t i = 0; i < n; ++i) {
-    if (flags & SSD1306_F_PGM) {
-        i2c_send_byte(pgm_read_byte(data + i));
-    } else {
-        i2c_send_byte(data[i]);
+  for (size_t i = 0; i < sizeof(ssd1306_reset) / sizeof(uint8_t); i++) {
+    code = i2c_send_byte(pgm_read_byte(ssd1306_reset + i));
+    if (code != I2C_R_OK) {
+      return false;
     }
   }
   i2c_stop();
+  return true;
 }
 
-void ssd1306_fill_gddram(uint8_t pageStartIdx, uint8_t pageEndIdx,
-                         uint8_t colStartIdx, uint8_t colEndIdx, uint8_t value) {
-  i2c_start();
-  ssd1306_prepare_write(pageStartIdx, pageEndIdx - 1, colStartIdx, colEndIdx - 1);
-  const uint32_t n = (uint32_t)(colEndIdx - colStartIdx) * (pageEndIdx - pageStartIdx);
+static inline bool ssd1306_prepare_write(const uint8_t pageBegin,
+                                         const uint8_t pageEnd,
+                                         const uint8_t colBegin,
+                                         const uint8_t colEnd) {
+  const uint8_t dataToTransfer[] = {(SSD1306_ADDRESS << 1) | I2C_WRITE,
+                                    CONTROL_BYTE(1, 0),
+                                    0x21, // col start/end
+                                    CONTROL_BYTE(1, 0),
+                                    colBegin,
+                                    CONTROL_BYTE(1, 0),
+                                    colEnd,
+                                    CONTROL_BYTE(1, 0),
+                                    0x22, // page start/end,
+                                    CONTROL_BYTE(1, 0),
+                                    pageBegin,
+                                    CONTROL_BYTE(1, 0),
+                                    pageEnd,
+                                    CONTROL_BYTE(0, 1)};
+  for (uint32_t i = 0; i < sizeof(dataToTransfer); i++) {
+    if (i2c_send_byte(dataToTransfer[i]) != I2C_R_OK) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ssd1306_write_gddram(const uint8_t pageStartIdx, const uint8_t pageEndIdx,
+                          const uint8_t colStartIdx, const uint8_t colEndIdx,
+                          const uint8_t *const data, const uint32_t n,
+                          const uint8_t flags) {
+  if (i2c_start() != I2C_R_OK ||
+      !ssd1306_prepare_write(pageStartIdx, pageEndIdx - 1, colStartIdx,
+                             colEndIdx - 1)) {
+    return false;
+  }
   for (uint32_t i = 0; i < n; ++i) {
-    i2c_send_byte(value);
+    if (flags & SSD1306_F_PGM) {
+      if (i2c_send_byte(pgm_read_byte(data + i)) != I2C_R_OK) {
+        return false;
+      }
+    } else {
+      if (i2c_send_byte(data[i]) != I2C_R_OK) {
+        return false;
+      }
+    }
   }
   i2c_stop();
+  return true;
+}
+
+bool ssd1306_fill_gddram(uint8_t pageStartIdx, uint8_t pageEndIdx,
+                         uint8_t colStartIdx, uint8_t colEndIdx,
+                         uint8_t value) {
+  if (i2c_start() != I2C_R_OK ||
+      !ssd1306_prepare_write(pageStartIdx, pageEndIdx - 1, colStartIdx,
+                             colEndIdx - 1)) {
+    return false;
+  }
+  const uint32_t n =
+      (uint32_t)(colEndIdx - colStartIdx) * (pageEndIdx - pageStartIdx);
+  for (uint32_t i = 0; i < n; ++i) {
+    if (i2c_send_byte(value) != I2C_R_OK) {
+      return false;
+    }
+  }
+  i2c_stop();
+  return true;
 }
