@@ -55,16 +55,7 @@ int main(void) {
         sy, sy + FONT_FONTNAME_NUM_PAGES, sx, sx + w,
         fontDataP, w * FONT_FONTNAME_NUM_PAGES, SSD1306_F_PGM
       );
-    //   for (uint8_t page = 0; page < FONT_FONTNAME_NUM_PAGES; page++) {
-    //     // clear
-    //     // ssd1306_write_gddram(
-    //     //     sy + page, sx, &zero, w, 0, 1
-    //     // );
-    //     // _delay_ms(100);
-    //     // char
-    //     ssd1306_write_gddram(sy + page, SSD1306_N_PAGES, sx, sx + w,
-    //                          fontDataP + w * page, w, SSD1306_F_PGM);
-    //   }
+
       sx += w;
       c++;
       if (c > 126) {
