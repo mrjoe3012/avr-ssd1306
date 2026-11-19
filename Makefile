@@ -1,27 +1,48 @@
-MCU		= atmega328p
-F_CPU	= 16000000UL
-BAUD	= 115200
-PORT	= /dev/ttyUSB0
+MCU		?= atmega328p
+F_CPU	?= 16000000UL
 CC		= avr-gcc
+AR		= avr-ar
 OBJCOPY	= avr-objcopy
-CFLAGS = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -O3 -Wall -Wextra -std=c11 -Iinclude -I.
-TARGET	= ssd1306
-SER_BAUD= 9600
+DEFINES ?=
+CFLAGS = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -O3 -Wall -Wextra -std=c11 -Iinclude $(DEFINES)
+BUILD_DIR = build
+BIN_DIR = $(BUILD_DIR)/bin
+LIB_DIR = $(BUILD_DIR)/lib
+INCLUDE_DIR = $(BUILD_DIR)/include
+SOURCE_DIR = src
+SOURCES = $(SOURCE_DIR)/i2c.c $(SOURCE_DIR)/ssd1306.c $(SOURCE_DIR)/util.c
+OBJECTS = $(SOURCES:$(SOURCE_DIR)/%.c=$(BUILD_DIR)/%.o)
+LIB_TARGET = ssd1306.a
+EXAMPLES_DIR = $(SOURCE_DIR)/examples
+EXAMPLE_TARGETS = block
 
-all: $(TARGET).hex
+all: ssd1306 examples
 
-$(TARGET).elf: src/main.c src/i2c.c src/ssd1306.c src/util.c
-	$(CC) $(CFLAGS) -o $@ $^
+ssd1306: $(LIB_DIR)/$(LIB_TARGET) includes
 
-$(TARGET).hex: $(TARGET).elf
+prep:
+	mkdir -p $(BUILD_DIR) $(LIB_DIR) $(INCLUDE_DIR) $(BIN_DIR)
+
+includes: | prep
+	cp -r include/ssd1306 $(INCLUDE_DIR)/
+
+$(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c | prep
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(LIB_DIR)/$(LIB_TARGET): $(OBJECTS) | prep
+	$(AR) rcs $@ $^
+
+$(BIN_DIR)/%.elf: $(EXAMPLES_DIR)/%.c $(LIB_DIR)/$(LIB_TARGET) | prep
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(BIN_DIR)/%.hex: $(BIN_DIR)/%.elf | prep
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 	avr-size --mcu=$(MCU) -C $<
 
-flash: $(TARGET).hex
-	avrdude -c arduino -p $(MCU) -P $(PORT) -b $(BAUD) -U flash:w:$<
-	picocom -b $(SER_BAUD) $(PORT)
+examples: prep $(addprefix $(BIN_DIR)/,$(EXAMPLE_TARGETS:%=%.hex))
 
 clean:
-	rm -f $(TARGET).elf $(TARGET).hex
+	rm -rf $(BUILD_DIR)
 
-.PHONY: all flash fuses clean
+.PHONY: all clean examples prep includes ssd1306
+.INTERMEDIATE: $(OBJECTS)
