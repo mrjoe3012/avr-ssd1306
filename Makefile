@@ -14,7 +14,7 @@ SOURCES = $(SOURCE_DIR)/i2c.c $(SOURCE_DIR)/ssd1306.c $(SOURCE_DIR)/util.c
 OBJECTS = $(SOURCES:$(SOURCE_DIR)/%.c=$(BUILD_DIR)/%.o)
 LIB_TARGET = ssd1306.a
 EXAMPLES_DIR = $(SOURCE_DIR)/examples
-EXAMPLE_TARGETS = block
+EXAMPLE_TARGETS = block text
 
 all: ssd1306 examples
 
