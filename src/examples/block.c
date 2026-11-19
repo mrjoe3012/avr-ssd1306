@@ -1,26 +1,32 @@
+/**
+ * @file block.c
+ * @author Joseph Agrane
+ * @brief An example using the SSD1306 with the atmega328p. Connect I2C bus to display
+ * and optionally an LED to PB1
+ * 
+ */
 #include <avr/io.h>
 #include <util/delay.h>
 #include <ssd1306/ssd1306.h>
 #include <ssd1306/i2c.h>
-
-// TODO: remove LED code
-// summary: a block is positoned somehwere, moves around and bounces off of the walls
-
+#include <string.h>
 
 // don't change these
 #define BLOCK_PAGES (1u)
 #define BLOCK_COLUMNS (8u)
 // these can be changed
 #define BLOCK_VEL (1)
-#define DELAY_MS 20
+#define DELAY_MS (32)
 
 struct block_state {
     int16_t x, y, velx, vely;
 } block;
 
+uint8_t framebuf[SSD1306_N_PAGES * SSD1306_N_COLS];
+
 void init_block() {
-    block.velx = 1;
-    block.vely = 1;
+    block.velx = BLOCK_VEL;
+    block.vely = BLOCK_VEL;
     block.x = 0;
     block.y = 0;
 }
@@ -48,26 +54,19 @@ void update_block() {
 }
 
 // can pass 0 for page to clear block, or 255 to fill it
-void draw_block(uint8_t page) {
+void draw_block(uint8_t page_val) {
     if (block.y % 8 == 0) {
         // block is page-aligned
         uint8_t y = block.y / 8;
-        ssd1306_fill_gddram(
-            y, y + BLOCK_PAGES, block.x, block.x + BLOCK_COLUMNS, page
-        );
+        memset(framebuf + y * SSD1306_N_COLS + block.x, page_val, BLOCK_PAGES * BLOCK_COLUMNS);
     } else {
         // block is spread across two pages
         uint8_t rem = block.y % 8;
-        uint8_t page1 = block.y / 8;
-        uint8_t page2 = page1 + 1;
-        uint8_t page1Val = page << rem;
-        uint8_t page2Val = page >> (8 - rem);
-        ssd1306_fill_gddram(
-            page1, page1 + 1, block.x, block.x + BLOCK_COLUMNS, page1Val
-        );
-        ssd1306_fill_gddram(
-            page2, page2 + 1, block.x, block.x + BLOCK_COLUMNS, page2Val
-        );
+        uint8_t page = block.y / 8;
+        uint8_t page1Val = page_val << rem;
+        uint8_t page2Val = page_val >> (8 - rem);
+        memset(framebuf + page * SSD1306_N_COLS + block.x, page1Val, BLOCK_PAGES * BLOCK_COLUMNS);
+        memset(framebuf + (page + 1) * SSD1306_N_COLS + block.x, page2Val, BLOCK_PAGES * BLOCK_COLUMNS);
     }
 }
 
@@ -92,8 +91,31 @@ int main(void) {
         }
         state = !state;
         draw_block(0);
+        int16_t x1 = block.x, y1 = block.y / 8;
         update_block();
+        int16_t x2 = block.x, y2 = block.y / 8;
+        int16_t minx, maxx, miny, maxy;
+        if (x1 < x2) {
+            minx = x1;
+            maxx = x2;
+        } else {
+            minx = x2;
+            maxx = x1;
+        }
+        if (y1 < y2) {
+            miny = y1;
+            maxy = y2;
+        } else {
+            miny = y2;
+            maxy = y1;
+        }
         draw_block(255);
+        // update the display only near the block
+        for (uint8_t page = miny; page < maxy + 2 && page < SSD1306_N_PAGES; page++) {
+            ssd1306_write_gddram(
+                page, page + 1, minx, maxx + BLOCK_COLUMNS, framebuf + page * SSD1306_N_COLS + minx, maxx - minx + BLOCK_COLUMNS, 0
+            );
+        }
         _delay_ms(DELAY_MS);
     }
 
