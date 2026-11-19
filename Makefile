@@ -4,14 +4,14 @@ BAUD	= 115200
 PORT	= /dev/ttyUSB0
 CC		= avr-gcc
 OBJCOPY	= avr-objcopy
-CFLAGS = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -O0 -Wall -Wextra -std=c11 -Iinclude -I.
+CFLAGS = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -O3 -Wall -Wextra -std=c11 -Iinclude -I.
 TARGET	= ssd1306
 SER_BAUD= 9600
 
 all: $(TARGET).hex
 
-$(TARGET).elf: src/main.c
-	$(CC) $(CFLAGS) -o $@ $<
+$(TARGET).elf: src/main.c src/i2c.c src/ssd1306.c src/util.c
+	$(CC) $(CFLAGS) -o $@ $^
 
 $(TARGET).hex: $(TARGET).elf
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
