@@ -12,7 +12,7 @@ typedef enum {
 } I2CRetCode;
 
 // if set to 0, busy waits, otherwise sleeps the cpu and uses interrupt
-// if set to 1, you must enable interrupts and configure sleep!
+// if set to 1, you must enable interrupts!
 #ifndef I2C_USE_INTERRUPT
 #define I2C_USE_INTERRUPT 0
 #endif
