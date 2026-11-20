@@ -3,7 +3,7 @@ F_CPU	?= 16000000UL
 CC		= avr-gcc
 AR		= avr-ar
 OBJCOPY	= avr-objcopy
-DEFINES ?=
+EXTRA_CFLAGS ?= 
 CFLAGS = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -O3 -Wall -Wextra -std=c11 -Iinclude $(DEFINES)
 BUILD_DIR = build
 BIN_DIR = $(BUILD_DIR)/bin
