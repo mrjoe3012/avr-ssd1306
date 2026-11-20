@@ -37,7 +37,7 @@ $(BIN_DIR)/%.elf: $(EXAMPLES_DIR)/%.c $(LIB_DIR)/$(LIB_TARGET) | prep
 
 $(BIN_DIR)/%.hex: $(BIN_DIR)/%.elf | prep
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
-	avr-size --mcu=$(MCU) -C $<
+	avr-size --mcu=$(MCU) -C $< || true
 
 examples: prep $(addprefix $(BIN_DIR)/,$(EXAMPLE_TARGETS:%=%.hex))
 
