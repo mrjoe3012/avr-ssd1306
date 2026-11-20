@@ -1,0 +1,22 @@
+name: build
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+    - name: Install Perequisites
+      run: |
+        apt-get update
+        apt-get install -y avr-libc binutils-avr gcc-avr
+    - name: Build
+      run: make all
