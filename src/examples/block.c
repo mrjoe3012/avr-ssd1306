@@ -102,7 +102,7 @@ int main(void) {
 
   uint8_t state = 0;
 
-  i2c_init();
+  i2c_init(I2C_CLOCK_SPEED_STANDARD);
   uart_init();
   if (!ssd1306_init()) {
     HANDLE_ERROR("Unable to initialise ssd1306.\r\n");

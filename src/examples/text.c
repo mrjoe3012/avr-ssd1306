@@ -29,7 +29,7 @@ static const uint8_t FONT_DEJAVUSANS_GBUF[] PROGMEM = {
 };
 
 int main(void) {
-  i2c_init();
+  i2c_init(I2C_CLOCK_SPEED_STANDARD);
   ssd1306_init();
 
   // clear whole display
